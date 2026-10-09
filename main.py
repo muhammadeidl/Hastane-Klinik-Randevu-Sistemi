@@ -1,6 +1,6 @@
 # =========================================================
-# Hastane / Klinik Randevu Sistemi
-# Temel Sınıf Yapıları (Base Classes)
+#  Hastane / Klinik Randevu Sistemi
+#  Temel Sınıf Yapıları (Base Classes)
 # =========================================================
 
 class User:
