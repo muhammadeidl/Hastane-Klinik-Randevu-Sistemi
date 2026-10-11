@@ -42,5 +42,16 @@ class Patient:
             self.__email = new_email
         else:
             raise ValueError("Invalid email address.")
+ # --- Business Logic Methods ---
 
-   
+    def add_appointment(self, appointment) -> None:
+        """Associates a new appointment with the patient."""
+        self.__appointments.append(appointment)
+
+    def get_appointments() -> list:
+        """Returns the list of appointments for the patient."""
+        return self.__appointments.copy()
+
+    def __str__(self) -> str:
+        """String representation of the Patient object."""
+        return f"Patient [ID: {self.__patient_id}, Name: {self.__name}]"
