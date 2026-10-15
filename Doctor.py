@@ -11,3 +11,4 @@ class Doctor:
         self.__services = []          # List of service IDs or names the doctor can perform
         self.__available_slots = []   # List of available time slots (e.g., ["10:00", "10:30", "11:00"])
         self.__is_active = True
+        self.__is_close = True
