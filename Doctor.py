@@ -35,3 +35,25 @@ class Doctor:
     def is_active(self) -> bool:
         return self.__is_active
 
+    
+    # --- Business Logic Methods ---
+    def add_service(self, service_name: str) -> None:
+        """Assigns a medical service that this doctor can perform."""
+        if service_name not in self.__services:
+            self.__services.append(service_name)
+
+    def get_services(self) -> list:
+        """Returns the list of services offered by this doctor."""
+        return self.__services.copy()
+
+    def add_available_slot(self, time_slot: str) -> None:
+        """Adds an available time slot for appointments."""
+        if time_slot not in self.__available_slots:
+            self.__available_slots.append(time_slot)
+
+    def remove_available_slot(self, time_slot: str) -> bool:
+        """Removes a time slot (e.g., when booked)."""
+        if time_slot in self.__available_slots:
+            self.__available_slots.remove(time_slot)
+            return True
+        return False
