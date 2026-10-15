@@ -12,3 +12,13 @@ class Doctor:
         self.__available_slots = []   # List of available time slots (e.g., ["10:00", "10:30", "11:00"])
         self.__is_active = True
         self.__is_close = True
+
+    
+    # --- Properties (Getters & Setters) ---
+    @property
+    def doctor_id(self) -> int:
+        return self.__doctor_id
+
+    @property
+    def name(self) -> str:
+        return self.__name
