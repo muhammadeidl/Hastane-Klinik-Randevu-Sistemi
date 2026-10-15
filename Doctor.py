@@ -57,3 +57,15 @@ class Doctor:
             self.__available_slots.remove(time_slot)
             return True
         return False
+    
+    def get_available_slots(self) -> list:
+        """Returns all currently available time slots."""
+        return self.__available_slots.copy()
+
+    def toggle_status(self) -> None:
+        """Toggles doctor active/inactive working status."""
+        self.__is_active = not self.__is_active
+
+    def __str__(self) -> str:
+        status = "Active" if self.__is_active else "On Leave/Inactive"
+        return f"Dr. {self.__name} [{self.__specialization}] - Branch ID: {self.__branch_id} ({status})"
