@@ -22,3 +22,16 @@ class Doctor:
     @property
     def name(self) -> str:
         return self.__name
+
+    @property
+    def specialization(self) -> str:
+        return self.__specialization
+
+    @property
+    def branch_id(self) -> int:
+        return self.__branch_id
+
+    @property
+    def is_active(self) -> bool:
+        return self.__is_active
+
