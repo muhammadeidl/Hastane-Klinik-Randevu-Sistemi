@@ -15,6 +15,7 @@ class Appointment:
         self.__status = "Pending"         # Options: Pending, Approved, Cancelled, Completed
         self.__fee = service.price        # Inherits price from the selected medical service
 
+   
     # --- Properties (Getters) ---
     @property
     def appointment_id(self) -> int:
@@ -43,3 +44,26 @@ class Appointment:
     @property
     def fee(self) -> float:
         return self.__fee
+
+    # --- Business Logic Methods ---
+    def approve_appointment(self) -> None:
+        """Approves the appointment (Requirement: Onay mekanizması)."""
+        self.__status = "Approved"
+
+    def cancel_appointment(self) -> None:
+        """Cancels the appointment."""
+        self.__status = "Cancelled"
+        # Return slot back to the doctor if needed
+
+    def complete_appointment(self) -> None:
+        """Marks the appointment as completed after visit."""
+        self.__status = "Completed"
+
+    def __str__(self) -> str:
+        return (f"Appointment [ID: {self.__appointment_id}] | "
+                f"Patient: {self.__patient.name} | "
+                f"Doctor: Dr. {self.__doctor.name} | "
+                f"Service: {self.__service.name} | "
+                f"Time: {self.__date_time} | "
+                f"Status: {self.__status} | "
+                f"Fee: {self.__fee} TL")
