@@ -14,3 +14,32 @@ class Appointment:
         self.__date_time = date_time      # Format: "YYYY-MM-DD HH:MM"
         self.__status = "Pending"         # Options: Pending, Approved, Cancelled, Completed
         self.__fee = service.price        # Inherits price from the selected medical service
+
+    # --- Properties (Getters) ---
+    @property
+    def appointment_id(self) -> int:
+        return self.__appointment_id
+
+    @property
+    def patient(self):
+        return self.__patient
+
+    @property
+    def doctor(self):
+        return self.__doctor
+
+    @property
+    def service(self):
+        return self.__service
+
+    @property
+    def date_time(self) -> str:
+        return self.__date_time
+
+    @property
+    def status(self) -> str:
+        return self.__status
+
+    @property
+    def fee(self) -> float:
+        return self.__fee
