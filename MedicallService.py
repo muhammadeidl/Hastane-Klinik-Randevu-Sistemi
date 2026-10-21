@@ -1,14 +1,14 @@
 class MedicalService:
     """
     Represents a specific medical service offered by a clinic or hospital branch.
-    Demonstrates Encapsulation by protecting pricing, duration, and status logic.
+    Demonstrates Encapsulation by protecting pricing, duration, category, and status logic.
     """
     def __init__(self, service_id: int, name: str, duration_minutes: int, price: float, category: str = "General"):
         self.__service_id = service_id
         self.__name = name
         self.duration_minutes = duration_minutes  # Uses setter for validation
         self.price = price                      # Uses setter for validation
-        self.__category = category
+        self.category = category                # Uses setter for validation
         self.__is_active = True                 # Service availability status
 
     # --- Properties (Getters & Setters) ---
@@ -45,13 +45,20 @@ class MedicalService:
     @price.setter
     def price(self, amount: float):
         if isinstance(amount, (int, float)) and amount >= 0:
-            self.__price = float(amount)
+            self.__price = round(float(amount), 2)
         else:
             raise ValueError("Price cannot be negative.")
 
     @property
     def category(self) -> str:
         return self.__category
+
+    @category.setter
+    def category(self, new_category: str):
+        if new_category and new_category.strip():
+            self.__category = new_category.strip()
+        else:
+            raise ValueError("Category cannot be empty.")
 
     @property
     def is_active(self) -> bool:
@@ -67,21 +74,22 @@ class MedicalService:
         self.__is_active = True
 
     def apply_discount(self, percentage: float) -> None:
-        """Applies a discount percentage to the service price."""
+        """Applies a discount percentage to the service price with rounding."""
         if 0 < percentage <= 100:
-            self.price = self.__price * (1 - (percentage / 100))
+            discounted_price = self.__price * (1 - (percentage / 100))
+            self.price = discounted_price  # Will use the price setter for validation and rounding
         else:
             raise ValueError("Discount percentage must be between 0 and 100.")
 
     def __str__(self) -> str:
         status = "Active" if self.__is_active else "Inactive"
-        return f"Service [ID: {self.__service_id}, Name: '{self.__name}', Duration: {self.__duration_minutes} min, Price: {self.__price} TL, Status: {status}]"
+        return f"Service [ID: {self.__service_id}, Name: '{self.__name}', Category: '{self.__category}', Duration: {self.__duration_minutes} min, Price: {self.__price} TL, Status: {status}]"
 
 
 class ServiceManager:
     """
     Manages a collection of MedicalService objects in the system.
-    Provides methods for adding, retrieving, and filtering services.
+    Provides methods for adding, retrieving, filtering, and updating services.
     """
     def __init__(self):
         self.__services = {}  # Dictionary mapping service_id to MedicalService instance
@@ -97,6 +105,10 @@ class ServiceManager:
         if service_id not in self.__services:
             raise KeyError(f"Service with ID {service_id} not found.")
         return self.__services[service_id]
+
+    def get_all_services(self) -> list:
+        """Returns a list of all registered services."""
+        return list(self.__services.values())
 
     def get_all_active_services(self) -> list:
         """Returns a list of all currently active services."""
