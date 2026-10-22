@@ -75,3 +75,41 @@ class Appointment:
                 f"Status: {self.__status} | "
                 f"Fee: {self.__fee} TL")
 
+class AppointmentManager:
+    """
+    Manages appointments collection and implements 
+    Conflict Control (Çakışma Kontrolü) mechanism.
+    """
+    def __init__(self):
+        self.__appointments = {}  # Dictionary mapping appointment_id to Appointment
+
+    def create_appointment(self, appointment_id: int, patient, doctor, service, date_time: str) -> Appointment:
+        """
+        Creates a new appointment after checking for time conflicts.
+        Requirement: Randevu oluşturulurken çakışma kontrolü yapılacak.
+        """
+        # Conflict Control Algorithm
+        for appt in self.__appointments.values():
+            if (appt.doctor.doctor_id == doctor.doctor_id and 
+                appt.date_time == date_time and 
+                appt.status != "Cancelled"):
+                raise ValueError(f"Conflict Error: Dr. {doctor.name} is already booked at {date_time}.")
+
+        # If no conflict, create and store
+        new_appointment = Appointment(appointment_id, patient, doctor, service, date_time)
+        self.__appointments[appointment_id] = new_appointment
+        return new_appointment
+
+    def get_appointment(self, appointment_id: int) -> Appointment:
+        """Retrieves an appointment by its ID."""
+        if appointment_id not in self.__appointments:
+            raise KeyError(f"Appointment ID {appointment_id} not found.")
+        return self.__appointments[appointment_id]
+
+    def get_appointments_by_doctor(self, doctor_id: int) -> list:
+        """Returns all appointments assigned to a specific doctor."""
+        return [a for a in self.__appointments.values() if a.doctor.doctor_id == doctor_id]
+
+    def get_appointments_by_patient(self, patient_id: int) -> list:
+        """Returns all appointments booked by a specific patient."""
+        return [a for a in self.__appointments.values() if a.patient.user_id == patient_id]
