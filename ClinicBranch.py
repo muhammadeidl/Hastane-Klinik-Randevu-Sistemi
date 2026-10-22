@@ -97,3 +97,9 @@ class ClinicBranch:
             self.__doctors.remove(doctor_id)
             return True
         return False
+
+
+def __str__(self) -> str:
+        return (f"ClinicBranch [ID: {self.__branch_id}, Name: '{self.__name}', "
+                f"Location: '{self.__location}', Services: {len(self.__services)}, "
+                f"Doctors: {len(self.__doctors)}]")
