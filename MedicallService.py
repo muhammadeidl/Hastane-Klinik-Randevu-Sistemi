@@ -47,8 +47,20 @@ class MedicalService:
         if isinstance(amount, (int, float)) and amount >= 0:
             self.__price = round(float(amount), 2)
         else:
+        
+            raise ValueError("Price cannot be negative.")
+    @property
+    def price(self) -> float:
+        return self.__price
+
+    @price.setter
+    def price(self, amount: float):
+        if isinstance(amount, (int, float)) and amount >= 0:
+            self.__price = round(float(amount), 2)
+        else:
             raise ValueError("Price cannot be negative.")
 
+    
     @property
     def category(self) -> str:
         return self.__category
