@@ -1,0 +1,78 @@
+
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1">
+
+    <title>Yeni Randevu</title>
+</head>
+
+<body>
+    <h1>Yeni Randevu Olustur</h1>
+
+    {% if hata %}
+        <p style="color: red;">{{ hata }}</p>
+    {% endif %}
+
+    {% if atamalar %}
+        <form method="POST">
+
+            <p>
+                <label for="secim">
+                    Doktor ve Hizmet:
+                </label>
+
+                <select
+                    id="secim"
+                    name="secim"
+                    required
+                >
+                    <option value="">
+                        Seciniz
+                    </option>
+
+                    {% for atama in atamalar %}
+                        <option value="{{ atama.calisan_id }}:{{ atama.hizmet_id }}">
+                            {{ atama.calisan.ad }}
+                            -
+                            {{ atama.hizmet.ad }}
+                            ({{ atama.hizmet.sure_dakika }} dk,
+                            {{ atama.hizmet.ucret }} TL)
+                        </option>
+                    {% endfor %}
+                </select>
+            </p>
+
+            <p>
+                <label for="tarih">
+                    Randevu Tarihi ve Saati:
+                </label>
+
+                <input
+                    type="datetime-local"
+                    id="tarih"
+                    name="tarih"
+                    required
+                >
+            </p>
+
+            <button type="submit">
+                Randevu Olustur
+            </button>
+        </form>
+    {% else %}
+        <p>
+            Henuz randevu alinabilecek hizmet bulunmuyor.
+        </p>
+    {% endif %}
+
+    <p>
+        <a href="{{ url_for('hasta_paneli') }}">
+            Randevularima Don
+        </a>
+    </p>
+
+</body>
+</html>

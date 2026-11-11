@@ -1,6 +1,7 @@
 
 import os
 
+from datetime import datetime
 from dotenv import load_dotenv
 
 from flask import (
@@ -50,9 +51,14 @@ def uygulama_olustur(test_ayarlari=None):
     veritabani.init_app(uygulama)
 
     # Modelleri yukle
-    import modeller
-    from modeller import Hasta, Kullanici, Randevu
+    from modeller import (
+    Hasta,
+    Kullanici,
+    Randevu,
+    CalisanHizmet
+)
 
+    from servisler import randevu_olustur
     # Veritabani tablolarini olustur
     with uygulama.app_context():
         veritabani.create_all()
@@ -210,6 +216,72 @@ def uygulama_olustur(test_ayarlari=None):
             kullanici=g.kullanici,
             randevular=randevular
         )
+
+    # Hasta randevu olusturma sayfasi
+    @uygulama.route("/randevu/yeni", methods=["GET", "POST"])
+    @rol_gerekli("hasta")
+    def randevu_yeni():
+
+        atamalar = veritabani.session.scalars(
+            select(CalisanHizmet)
+        ).all()
+
+        if request.method == "GET":
+            return render_template(
+                "randevu_yeni.html",
+                atamalar=atamalar
+            )
+
+        # Formdan bilgileri al
+        secim = request.form.get("secim", "")
+        tarih = request.form.get("tarih", "")
+
+        try:
+            calisan_id, hizmet_id = map(
+                int, secim.split(":")
+            )
+
+            baslangic = datetime.fromisoformat(tarih)
+
+        except (ValueError, TypeError):
+            return render_template(
+                "randevu_yeni.html",
+                atamalar=atamalar,
+                hata="Gecersiz randevu bilgileri."
+            ), 400
+
+        atama = veritabani.session.get(
+            CalisanHizmet,
+            (calisan_id, hizmet_id)
+        )
+
+        if atama is None:
+            return render_template(
+                "randevu_yeni.html",
+                atamalar=atamalar,
+                hata="Secilen hizmet uygun degil."
+            ), 400
+
+        try:
+            randevu = randevu_olustur(
+                g.kullanici,
+                atama.calisan,
+                atama.hizmet,
+                baslangic
+            )
+
+            veritabani.session.commit()
+
+        except ValueError as hata:
+            veritabani.session.rollback()
+
+            return render_template(
+                "randevu_yeni.html",
+                atamalar=atamalar,
+                hata=str(hata)
+            ), 400
+
+        return redirect(url_for("hasta_paneli"))
 
 
     # Doktor ve saglik personeli paneli
