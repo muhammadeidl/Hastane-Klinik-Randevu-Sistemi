@@ -16,56 +16,96 @@
         <p style="color: red;">{{ hata }}</p>
     {% endif %}
 
-    {% if atamalar %}
-        <form method="POST">
+    <!-- 1. Doktor, hizmet ve gun secimi -->
+    <form method="GET"
+          action="{{ url_for('randevu_yeni') }}">
 
-            <p>
-                <label for="secim">
-                    Doktor ve Hizmet:
-                </label>
-
-                <select
-                    id="secim"
-                    name="secim"
-                    required
-                >
-                    <option value="">
-                        Seciniz
-                    </option>
-
-                    {% for atama in atamalar %}
-                        <option value="{{ atama.calisan_id }}:{{ atama.hizmet_id }}">
-                            {{ atama.calisan.ad }}
-                            -
-                            {{ atama.hizmet.ad }}
-                            ({{ atama.hizmet.sure_dakika }} dk,
-                            {{ atama.hizmet.ucret }} TL)
-                        </option>
-                    {% endfor %}
-                </select>
-            </p>
-
-            <p>
-                <label for="tarih">
-                    Randevu Tarihi ve Saati:
-                </label>
-
-                <input
-                    type="datetime-local"
-                    id="tarih"
-                    name="tarih"
-                    required
-                >
-            </p>
-
-            <button type="submit">
-                Randevu Olustur
-            </button>
-        </form>
-    {% else %}
         <p>
-            Henuz randevu alinabilecek hizmet bulunmuyor.
+            <label for="secim">Doktor ve Hizmet:</label>
+
+            <select id="secim" name="secim" required>
+                <option value="">Seciniz</option>
+
+                {% for atama in atamalar %}
+                    {% set deger = atama.calisan_id|string
+                                    ~ ':'
+                                    ~ atama.hizmet_id|string %}
+
+                    <option value="{{ deger }}"
+                        {% if secim == deger %}selected{% endif %}>
+                        {{ atama.calisan.ad }} -
+                        {{ atama.hizmet.ad }}
+                        ({{ atama.hizmet.sure_dakika }} dk,
+                        {{ atama.hizmet.ucret }} TL)
+                    </option>
+                {% endfor %}
+            </select>
         </p>
+
+        <p>
+            <label for="gun">Randevu Tarihi:</label>
+
+            <input
+                type="date"
+                id="gun"
+                name="gun"
+                value="{{ gun }}"
+                required
+            >
+        </p>
+
+        <button type="submit">
+            Uygun Saatleri Goster
+        </button>
+    </form>
+
+    <!-- 2. Uygun saatlerden birini sec -->
+    {% if secim and gun and not hata %}
+        <hr>
+
+        <h2>Uygun Saatler</h2>
+
+        {% if uygun_saatler %}
+            <form method="POST"
+                  action="{{ url_for('randevu_yeni') }}">
+
+                <input type="hidden"
+                       name="secim"
+                       value="{{ secim }}">
+
+                <input type="hidden"
+                       name="gun"
+                       value="{{ gun }}">
+
+                <p>
+                    <label for="tarih">
+                        Randevu Saati:
+                    </label>
+
+                    <select id="tarih" name="tarih" required>
+                        <option value="">
+                            Saat Seciniz
+                        </option>
+
+                        {% for saat in uygun_saatler %}
+                            <option value="{{ saat.isoformat() }}">
+                                {{ saat.strftime('%H:%M') }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </p>
+
+                <button type="submit">
+                    Randevu Olustur
+                </button>
+            </form>
+
+        {% else %}
+            <p>
+                Bu tarih icin uygun saat bulunmuyor.
+                Lutfen baska bir gun seciniz.
+            </p>
+        {% endif %}
     {% endif %}
 
     <p>

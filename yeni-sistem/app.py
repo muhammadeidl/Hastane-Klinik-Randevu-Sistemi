@@ -1,7 +1,7 @@
 
 import os
 
-from datetime import datetime
+from datetime import date, datetime
 from dotenv import load_dotenv
 
 from flask import (
@@ -58,7 +58,10 @@ def uygulama_olustur(test_ayarlari=None):
     CalisanHizmet
 )
 
-    from servisler import randevu_olustur
+    from servisler import (
+    randevu_olustur,
+    uygun_saatleri_getir
+                            )
     # Veritabani tablolarini olustur
     with uygulama.app_context():
         veritabani.create_all()
@@ -217,53 +220,114 @@ def uygulama_olustur(test_ayarlari=None):
             randevular=randevular
         )
 
+    
     # Hasta randevu olusturma sayfasi
     @uygulama.route("/randevu/yeni", methods=["GET", "POST"])
     @rol_gerekli("hasta")
     def randevu_yeni():
-
         atamalar = veritabani.session.scalars(
             select(CalisanHizmet)
         ).all()
 
+        secim = (
+            request.args.get("secim", "")
+            if request.method == "GET"
+            else request.form.get("secim", "")
+        )
+
+        gun = (
+            request.args.get("gun", "")
+            if request.method == "GET"
+            else request.form.get("gun", "")
+        )
+
+        atama = None
+        secilen_tarih = None
+        uygun_saatler = []
+        hata = None
+
+        # Doktor ve hizmet secimini kontrol et
+        if secim:
+            try:
+                calisan_id, hizmet_id = map(
+                    int, secim.split(":")
+                )
+
+                atama = veritabani.session.get(
+                    CalisanHizmet,
+                    (calisan_id, hizmet_id)
+                )
+
+                if atama is None:
+                    hata = "Secilen hizmet uygun degil."
+
+            except (ValueError, TypeError):
+                hata = "Gecersiz doktor veya hizmet secimi."
+
+        # Tarihi kontrol et
+        if gun:
+            try:
+                secilen_tarih = date.fromisoformat(gun)
+            except ValueError:
+                hata = "Gecersiz tarih."
+
+        # Uygun saatleri hesapla
+        if atama is not None and secilen_tarih is not None and not hata:
+            try:
+                uygun_saatler = uygun_saatleri_getir(
+                    atama.calisan,
+                    atama.hizmet,
+                    secilen_tarih
+                )
+            except ValueError as mesaj:
+                hata = str(mesaj)
+
+        # GET: Secim ve uygun saatleri goster
         if request.method == "GET":
             return render_template(
                 "randevu_yeni.html",
-                atamalar=atamalar
+                atamalar=atamalar,
+                secim=secim,
+                gun=gun,
+                uygun_saatler=uygun_saatler,
+                hata=hata
             )
 
-        # Formdan bilgileri al
-        secim = request.form.get("secim", "")
+        # POST: Randevu olustur
         tarih = request.form.get("tarih", "")
 
         try:
-            calisan_id, hizmet_id = map(
-                int, secim.split(":")
-            )
-
             baslangic = datetime.fromisoformat(tarih)
+        except ValueError:
+            hata = "Gecersiz randevu tarihi veya saati."
+            baslangic = None
 
-        except (ValueError, TypeError):
+        if atama is None or baslangic is None or hata:
             return render_template(
                 "randevu_yeni.html",
                 atamalar=atamalar,
-                hata="Gecersiz randevu bilgileri."
-            ), 400
-
-        atama = veritabani.session.get(
-            CalisanHizmet,
-            (calisan_id, hizmet_id)
-        )
-
-        if atama is None:
-            return render_template(
-                "randevu_yeni.html",
-                atamalar=atamalar,
-                hata="Secilen hizmet uygun degil."
+                secim=secim,
+                gun=gun,
+                uygun_saatler=uygun_saatler,
+                hata=hata or "Gecersiz randevu secimi."
             ), 400
 
         try:
-            randevu = randevu_olustur(
+            # Secilen saatin halen uygun oldugunu kontrol et
+            guncel_saatler = uygun_saatleri_getir(
+                atama.calisan,
+                atama.hizmet,
+                baslangic.date()
+            )
+
+            if baslangic not in guncel_saatler:
+                raise ValueError(
+                    "Bu saat artik uygun degil. "
+                    "Lutfen baska bir saat seciniz."
+                )
+
+            # Mevcut randevu servisini kullan
+            randevu_olustur(
                 g.kullanici,
                 atama.calisan,
                 atama.hizmet,
@@ -272,16 +336,27 @@ def uygulama_olustur(test_ayarlari=None):
 
             veritabani.session.commit()
 
-        except ValueError as hata:
+        except ValueError as mesaj:
             veritabani.session.rollback()
+
+            # Hata sonrasinda saatleri yeniden hesapla
+            uygun_saatler = uygun_saatleri_getir(
+                atama.calisan,
+                atama.hizmet,
+                baslangic.date()
+            )
 
             return render_template(
                 "randevu_yeni.html",
                 atamalar=atamalar,
-                hata=str(hata)
+                secim=secim,
+                gun=baslangic.date().isoformat(),
+                uygun_saatler=uygun_saatler,
+                hata=str(mesaj)
             ), 400
 
         return redirect(url_for("hasta_paneli"))
+
 
 
     # Doktor ve saglik personeli paneli

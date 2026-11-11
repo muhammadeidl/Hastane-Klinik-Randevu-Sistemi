@@ -1,6 +1,6 @@
 
 
-from datetime import datetime, time, timedelta
+from datetime import date, datetime, time, timedelta
 
 from sqlalchemy import select
 
@@ -253,3 +253,107 @@ def randevu_durum_degistir(randevu, kullanici, yeni_durum):
 
     randevu.durum = yeni_durum
     return randevu
+
+
+
+def uygun_saatleri_getir(calisan, hizmet, tarih):
+    # 1. Girilen bilgileri kontrol et
+    calisan_kontrol(calisan)
+
+    if not isinstance(hizmet, Hizmet) or hizmet.id is None:
+        raise ValueError("Gecerli bir hizmet gerekli")
+
+    if not isinstance(tarih, date) or isinstance(tarih, datetime):
+        raise ValueError("Gecerli bir tarih gerekli")
+
+    if hizmet.sure_dakika <= 0:
+        raise ValueError("Hizmet suresi gecersiz")
+
+    # 2. Calisan bu hizmeti sunuyor mu?
+    atama = veritabani.session.get(
+        CalisanHizmet,
+        (calisan.id, hizmet.id)
+    )
+
+    if atama is None:
+        raise ValueError("Calisan bu hizmeti sunmuyor")
+
+    if hizmet.bolum.sube_id != calisan.sube_id:
+        raise ValueError("Hizmet farkli subeye ait")
+
+    gun = tarih.weekday()
+
+    # 3. Calisanin uygunluk saatleri
+    uygunluklar = veritabani.session.scalars(
+        select(CalisanUygunluk).where(
+            CalisanUygunluk.calisan_id == calisan.id,
+            CalisanUygunluk.gun == gun
+        )
+    ).all()
+
+    # 4. Subenin calisma saatleri
+    calisma_saatleri = veritabani.session.scalars(
+        select(CalismaSaati).where(
+            CalismaSaati.sube_id == calisan.sube_id,
+            CalismaSaati.gun == gun
+        )
+    ).all()
+
+    # 5. O gunun mevcut randevulari
+    gun_baslangici = datetime.combine(tarih, time.min)
+    gun_bitisi = gun_baslangici + timedelta(days=1)
+
+    randevular = veritabani.session.scalars(
+        select(Randevu).where(
+            Randevu.calisan_id == calisan.id,
+            Randevu.durum.in_(["beklemede", "onaylandi"]),
+            Randevu.baslangic < gun_bitisi,
+            Randevu.bitis > gun_baslangici
+        )
+    ).all()
+
+    sure = timedelta(minutes=hizmet.sure_dakika)
+    simdi = datetime.now()
+    uygun_saatler = set()
+
+    # 6. Uygun saatleri hesapla
+    for uygunluk in uygunluklar:
+        baslangic = datetime.combine(
+            tarih, uygunluk.baslangic
+        )
+
+        uygunluk_bitisi = datetime.combine(
+            tarih, uygunluk.bitis
+        )
+
+        while baslangic + sure <= uygunluk_bitisi:
+            bitis = baslangic + sure
+
+            # Gecmis bir saat olamaz
+            gelecek_mi = baslangic > simdi
+
+            # Sube bu saatte acik mi?
+            sube_acik_mi = any(
+                calisma.baslangic <= baslangic.time()
+                and bitis.time() <= calisma.bitis
+                and bitis.date() == tarih
+                for calisma in calisma_saatleri
+            )
+
+            # Baska randevu ile cakisiyor mu?
+            cakisma_var = any(
+                baslangic < randevu.bitis
+                and bitis > randevu.baslangic
+                for randevu in randevular
+            )
+
+            if (
+                gelecek_mi
+                and sube_acik_mi
+                and not cakisma_var
+            ):
+                uygun_saatler.add(baslangic)
+
+            baslangic += sure
+
+    return sorted(uygun_saatler)

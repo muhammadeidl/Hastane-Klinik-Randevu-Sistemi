@@ -101,3 +101,46 @@ def test_web_randevu_olusturma():
 
         assert panel.status_code == 200
         assert b"Kalp Muayenesi" in panel.data
+
+        # Ilk randevudan sonra uygun saatleri kontrol et
+        secim = f"{doktor.id}:{hizmet.id}"
+        gun = tarih.isoformat()
+
+        cevap = istemci.get("/randevu/yeni", query_string={
+            "secim": secim,
+            "gun": gun
+        })
+
+        assert cevap.status_code == 200
+
+        saat_1000 = baslangic
+        saat_1030 = baslangic + timedelta(minutes=30)
+
+        # 10:00 dolu, 10:30 bos olmali
+        assert saat_1000.isoformat().encode() not in cevap.data
+        assert saat_1030.isoformat().encode() in cevap.data
+
+        # Ikinci randevuyu 10:30 icin olustur
+        cevap = istemci.post("/randevu/yeni", data={
+            "secim": secim,
+            "gun": gun,
+            "tarih": saat_1030.isoformat()
+        })
+
+        assert cevap.status_code == 302
+
+        # Uygun saatleri tekrar getir
+        cevap = istemci.get("/randevu/yeni", query_string={
+            "secim": secim,
+            "gun": gun
+        })
+
+        assert cevap.status_code == 200
+
+        # Iki saat de artik dolu olmali
+        assert saat_1000.isoformat().encode() not in cevap.data
+        assert saat_1030.isoformat().encode() not in cevap.data
+
+        # 11:00 halen uygun olmali
+        saat_1100 = baslangic + timedelta(minutes=60)
+        assert saat_1100.isoformat().encode() in cevap.data
