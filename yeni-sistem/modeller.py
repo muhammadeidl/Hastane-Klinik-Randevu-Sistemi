@@ -216,10 +216,21 @@ class Hasta(Kullanici):
         return "Hasta"
 
 
+
 class Calisan(Kullanici):
     __mapper_args__ = {
         "polymorphic_abstract": True
     }
+
+    sube_id: Mapped[int | None] = mapped_column(
+        ForeignKey("subeler.id"),
+        nullable=True
+    )
+
+    sube: Mapped["Sube | None"] = relationship(
+        foreign_keys=[sube_id]
+    )
+
 
 
 class Doktor(Calisan):
