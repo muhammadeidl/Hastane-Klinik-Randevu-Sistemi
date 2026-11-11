@@ -1,0 +1,29 @@
+
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Kullanici Paneli</title>
+</head>
+
+<body>
+    <h1>Hastane Klinik Randevu Sistemi</h1>
+
+    <h2>Hos geldiniz, {{ kullanici.ad }}!</h2>
+
+    <p>
+        <strong>E-posta:</strong>
+        {{ kullanici.eposta }}
+    </p>
+
+    <p>
+        <strong>Kullanici Rolu:</strong>
+        {{ kullanici.rol_adi() }}
+    </p>
+
+    <form method="POST" action="{{ url_for('cikis') }}">
+        <button type="submit">Cikis Yap</button>
+    </form>
+</body>
+</html>
