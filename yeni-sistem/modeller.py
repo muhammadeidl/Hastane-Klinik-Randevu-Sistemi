@@ -263,3 +263,59 @@ class Yonetici(Kullanici):
 
     def rol_adi(self):
         return "Yonetici"
+
+
+class CalisanHizmet(veritabani.Model):
+    __tablename__ = "calisan_hizmetleri"
+
+    calisan_id: Mapped[int] = mapped_column(
+        ForeignKey("kullanicilar.id"),
+        primary_key=True
+    )
+
+    hizmet_id: Mapped[int] = mapped_column(
+        ForeignKey("hizmetler.id"),
+        primary_key=True
+    )
+
+    calisan: Mapped["Kullanici"] = relationship()
+    hizmet: Mapped["Hizmet"] = relationship()
+
+
+class CalisanUygunluk(veritabani.Model):
+    __tablename__ = "calisan_uygunluklari"
+
+    __table_args__ = (
+        CheckConstraint(
+            "gun BETWEEN 0 AND 6",
+            name="ck_uygunluk_gun"
+        ),
+        CheckConstraint(
+            "baslangic < bitis",
+            name="ck_uygunluk_zaman"
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+
+    calisan_id: Mapped[int] = mapped_column(
+        ForeignKey("kullanicilar.id"),
+        nullable=False
+    )
+
+    gun: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False
+    )
+
+    baslangic: Mapped[time] = mapped_column(
+        Time,
+        nullable=False
+    )
+
+    bitis: Mapped[time] = mapped_column(
+        Time,
+        nullable=False
+    )
+
+    calisan: Mapped["Kullanici"] = relationship()
