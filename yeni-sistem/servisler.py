@@ -195,3 +195,57 @@ def randevu_olustur(hasta, calisan, hizmet, baslangic):
     veritabani.session.add(randevu)
 
     return randevu
+
+
+
+def randevu_durum_degistir(randevu, kullanici, yeni_durum):
+    # 1. Randevu kontrolu
+    if not isinstance(randevu, Randevu) or randevu.id is None:
+        raise ValueError("Gecerli bir randevu gerekli")
+
+    # 2. Kullanici kontrolu
+    if kullanici.id is None:
+        raise ValueError("Kayitli kullanici gerekli")
+
+    hasta_mi = (
+        isinstance(kullanici, Hasta)
+        and kullanici.id == randevu.hasta_id
+    )
+
+    calisan_mi = (
+        isinstance(kullanici, (Doktor, SaglikPersoneli))
+        and kullanici.id == randevu.calisan_id
+    )
+
+    if not hasta_mi and not calisan_mi:
+        raise PermissionError("Bu randevu icin yetkiniz yok")
+
+    # 3. Gecmis randevular degistirilemez
+    if randevu.bitis <= datetime.now():
+        raise ValueError("Gecmis randevu degistirilemez")
+
+    # 4. Durum gecisleri
+    izinli_gecisler = {
+        "beklemede": ["onaylandi", "reddedildi", "iptal"],
+        "onaylandi": ["iptal"],
+        "reddedildi": [],
+        "iptal": []
+    }
+
+    if yeni_durum not in izinli_gecisler.get(
+        randevu.durum, []
+    ):
+        raise ValueError("Gecersiz durum degisikligi")
+
+    # 5. Hasta sadece iptal edebilir
+    if hasta_mi and yeni_durum != "iptal":
+        raise PermissionError("Hasta sadece iptal edebilir")
+
+    # 6. Onay ve ret sadece calisana ait
+    if yeni_durum in ("onaylandi", "reddedildi"):
+        if not calisan_mi:
+            raise PermissionError("Onay veya ret yetkiniz yok")
+
+    randevu.durum = yeni_durum
+
+    return randevu

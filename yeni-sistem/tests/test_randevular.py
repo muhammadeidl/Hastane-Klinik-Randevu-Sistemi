@@ -10,7 +10,10 @@ from modeller import (
     Hasta, Doktor, CalismaSaati, Randevu
 )
 from servisler import (
-    hizmet_ata, uygunluk_ekle, randevu_olustur
+    hizmet_ata,
+    uygunluk_ekle,
+    randevu_olustur,
+    randevu_durum_degistir
 )
 from veritabani import veritabani
 
@@ -133,3 +136,72 @@ def test_ardisik_randevu(veriler):
     veritabani.session.commit()
 
     assert ikinci.baslangic == tarih + timedelta(minutes=30)
+
+
+def test_doktor_randevu_onaylama(veriler):
+    hasta, doktor, hizmet, tarih = veriler
+
+    randevu = randevu_olustur(
+        hasta, doktor, hizmet, tarih
+    )
+    veritabani.session.commit()
+
+    randevu_durum_degistir(
+        randevu, doktor, "onaylandi"
+    )
+    veritabani.session.commit()
+
+    assert randevu.durum == "onaylandi"
+
+
+def test_hasta_randevu_iptal(veriler):
+    hasta, doktor, hizmet, tarih = veriler
+
+    randevu = randevu_olustur(
+        hasta, doktor, hizmet, tarih
+    )
+    veritabani.session.commit()
+
+    randevu_durum_degistir(
+        randevu, hasta, "iptal"
+    )
+    veritabani.session.commit()
+
+    assert randevu.durum == "iptal"
+
+
+def test_hasta_randevu_onaylayamaz(veriler):
+    hasta, doktor, hizmet, tarih = veriler
+
+    randevu = randevu_olustur(
+        hasta, doktor, hizmet, tarih
+    )
+    veritabani.session.commit()
+
+    with pytest.raises(PermissionError):
+        randevu_durum_degistir(
+            randevu, hasta, "onaylandi"
+        )
+
+    assert randevu.durum == "beklemede"
+
+
+def test_iptal_edilen_randevu_onaylanamaz(veriler):
+    hasta, doktor, hizmet, tarih = veriler
+
+    randevu = randevu_olustur(
+        hasta, doktor, hizmet, tarih
+    )
+    veritabani.session.commit()
+
+    randevu_durum_degistir(
+        randevu, hasta, "iptal"
+    )
+    veritabani.session.commit()
+
+    with pytest.raises(ValueError):
+        randevu_durum_degistir(
+            randevu, doktor, "onaylandi"
+        )
+
+    assert randevu.durum == "iptal"
