@@ -1,4 +1,3 @@
-
 # from sqlalchemy import ForeignKey, String, Integer, Numeric, Time, UniqueConstraint, CheckConstraint
 # from sqlalchemy.orm import Mapped, mapped_column, relationship
 # from werkzeug.security import generate_password_hash, check_password_hash
@@ -6,12 +5,8 @@
 # from decimal import Decimal
 # from datetime import time
 # from veritabani import veritabani
-
-
-
 from datetime import datetime, time
 from decimal import Decimal
-
 from sqlalchemy import (
     ForeignKey,
     String,
@@ -21,19 +16,18 @@ from sqlalchemy import (
     UniqueConstraint,
     CheckConstraint
 )
-
 from sqlalchemy.orm import (
     Mapped,
     mapped_column,
     relationship
 )
-
 from werkzeug.security import (
     generate_password_hash,
     check_password_hash
 )
-
 from veritabani import veritabani
+
+
 
 class Hastane(veritabani.Model):
     __tablename__ = "hastaneler"
@@ -285,13 +279,24 @@ class SaglikPersoneli(Calisan):
         return "Saglik Personeli"
 
 
+
 class Yonetici(Kullanici):
     __mapper_args__ = {
         "polymorphic_identity": "yonetici"
     }
 
+    hastane_id: Mapped[int | None] = mapped_column(
+        ForeignKey("hastaneler.id"),
+        nullable=True
+    )
+
+    hastane: Mapped["Hastane | None"] = relationship(
+        foreign_keys=[hastane_id]
+    )
+
     def rol_adi(self):
         return "Yonetici"
+
 
 
 class CalisanHizmet(veritabani.Model):

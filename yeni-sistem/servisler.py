@@ -8,6 +8,7 @@ from modeller import (
     Hasta,
     Doktor,
     SaglikPersoneli,
+    Yonetici,
     Hizmet,
     Randevu,
     CalismaSaati,
@@ -199,12 +200,10 @@ def randevu_olustur(hasta, calisan, hizmet, baslangic):
 
 
 def randevu_durum_degistir(randevu, kullanici, yeni_durum):
-    # 1. Randevu kontrolu
     if not isinstance(randevu, Randevu) or randevu.id is None:
         raise ValueError("Gecerli bir randevu gerekli")
 
-    # 2. Kullanici kontrolu
-    if kullanici.id is None:
+    if kullanici is None or kullanici.id is None:
         raise ValueError("Kayitli kullanici gerekli")
 
     hasta_mi = (
@@ -217,14 +216,21 @@ def randevu_durum_degistir(randevu, kullanici, yeni_durum):
         and kullanici.id == randevu.calisan_id
     )
 
-    if not hasta_mi and not calisan_mi:
+    yonetici_mi = False
+
+    if isinstance(kullanici, Yonetici):
+        yonetici_mi = (
+            kullanici.hastane_id is not None
+            and kullanici.hastane_id
+            == randevu.hizmet.bolum.sube.hastane_id
+        )
+
+    if not (hasta_mi or calisan_mi or yonetici_mi):
         raise PermissionError("Bu randevu icin yetkiniz yok")
 
-    # 3. Gecmis randevular degistirilemez
     if randevu.bitis <= datetime.now():
         raise ValueError("Gecmis randevu degistirilemez")
 
-    # 4. Durum gecisleri
     izinli_gecisler = {
         "beklemede": ["onaylandi", "reddedildi", "iptal"],
         "onaylandi": ["iptal"],
@@ -237,15 +243,13 @@ def randevu_durum_degistir(randevu, kullanici, yeni_durum):
     ):
         raise ValueError("Gecersiz durum degisikligi")
 
-    # 5. Hasta sadece iptal edebilir
-    if hasta_mi and yeni_durum != "iptal":
-        raise PermissionError("Hasta sadece iptal edebilir")
+    if hasta_mi and not (calisan_mi or yonetici_mi):
+        if yeni_durum != "iptal":
+            raise PermissionError("Hasta sadece iptal edebilir")
 
-    # 6. Onay ve ret sadece calisana ait
     if yeni_durum in ("onaylandi", "reddedildi"):
-        if not calisan_mi:
+        if not (calisan_mi or yonetici_mi):
             raise PermissionError("Onay veya ret yetkiniz yok")
 
     randevu.durum = yeni_durum
-
     return randevu

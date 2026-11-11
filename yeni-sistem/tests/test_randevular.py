@@ -7,7 +7,7 @@ import pytest
 from app import uygulama_olustur
 from modeller import (
     Hastane, Sube, Bolum, Hizmet,
-    Hasta, Doktor, CalismaSaati, Randevu
+    Hasta, Doktor, CalismaSaati, Randevu, Yonetici
 )
 from servisler import (
     hizmet_ata,
@@ -205,3 +205,58 @@ def test_iptal_edilen_randevu_onaylanamaz(veriler):
         )
 
     assert randevu.durum == "iptal"
+
+
+
+def test_yonetici_randevu_onaylama(veriler):
+    hasta, doktor, hizmet, tarih = veriler
+
+    yonetici = Yonetici(
+        ad="Hastane Yoneticisi",
+        eposta="yonetici@test.com",
+        hastane=hizmet.bolum.sube.hastane
+    )
+    yonetici.sifre_ayarla("GucluSifre123!")
+
+    veritabani.session.add(yonetici)
+    veritabani.session.commit()
+
+    randevu = randevu_olustur(
+        hasta, doktor, hizmet, tarih
+    )
+    veritabani.session.commit()
+
+    randevu_durum_degistir(
+        randevu, yonetici, "onaylandi"
+    )
+    veritabani.session.commit()
+
+    assert randevu.durum == "onaylandi"
+
+
+def test_farkli_hastane_yoneticisi_reddedilir(veriler):
+    hasta, doktor, hizmet, tarih = veriler
+
+    baska_hastane = Hastane(ad="Baska Hastane")
+
+    yonetici = Yonetici(
+        ad="Baska Yonetici",
+        eposta="baska@test.com",
+        hastane=baska_hastane
+    )
+    yonetici.sifre_ayarla("GucluSifre123!")
+
+    veritabani.session.add(yonetici)
+    veritabani.session.commit()
+
+    randevu = randevu_olustur(
+        hasta, doktor, hizmet, tarih
+    )
+    veritabani.session.commit()
+
+    with pytest.raises(PermissionError):
+        randevu_durum_degistir(
+            randevu, yonetici, "onaylandi"
+        )
+
+    assert randevu.durum == "beklemede"
