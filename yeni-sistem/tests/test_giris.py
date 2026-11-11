@@ -41,7 +41,7 @@ def test_basarili_giris(istemci):
     })
 
     assert cevap.status_code == 302
-    assert "/panel" in cevap.location
+    assert "/hasta/panel" in cevap.location
 
     panel = istemci.get("/panel")
 

@@ -51,7 +51,7 @@ def uygulama_olustur(test_ayarlari=None):
 
     # Modelleri yukle
     import modeller
-    from modeller import Hasta, Kullanici
+    from modeller import Hasta, Kullanici, Randevu
 
     # Veritabani tablolarini olustur
     with uygulama.app_context():
@@ -171,6 +171,16 @@ def uygulama_olustur(test_ayarlari=None):
         # Kullanici kimligini oturuma kaydet
         session["kullanici_id"] = kullanici.id
 
+        # Kullaniciyi rolune gore yonlendir
+        if kullanici.rol == "hasta":
+            return redirect(url_for("hasta_paneli"))
+
+        elif kullanici.rol in ("doktor", "saglik_personeli"):
+            return redirect(url_for("calisan_paneli"))
+
+        elif kullanici.rol == "yonetici":
+            return redirect(url_for("yonetici_paneli"))
+
         return redirect(url_for("panel"))
 
     # Ortak kullanici paneli
@@ -182,14 +192,25 @@ def uygulama_olustur(test_ayarlari=None):
             kullanici=g.kullanici
         )
 
-    # Sadece hastalar icin panel
+    
+    # Hastanin kendi randevularini goster
     @uygulama.route("/hasta/panel")
     @rol_gerekli("hasta")
     def hasta_paneli():
+        randevular = veritabani.session.scalars(
+            select(Randevu)
+            .where(
+                Randevu.hasta_id == g.kullanici.id
+            )
+            .order_by(Randevu.baslangic.desc())
+        ).all()
+
         return render_template(
-            "panel.html",
-            kullanici=g.kullanici
+            "hasta_panel.html",
+            kullanici=g.kullanici,
+            randevular=randevular
         )
+
 
     # Doktor ve saglik personeli paneli
     @uygulama.route("/calisan/panel")

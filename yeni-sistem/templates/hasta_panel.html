@@ -1,0 +1,56 @@
+
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1">
+    <title>Hasta Paneli</title>
+</head>
+
+<body>
+    <h1>Hasta Paneli</h1>
+
+    <h2>Hos geldiniz, {{ kullanici.ad }}!</h2>
+
+    <p>E-posta: {{ kullanici.eposta }}</p>
+
+    <h3>Randevularim</h3>
+
+    {% if randevular %}
+        <table border="1" cellpadding="8">
+            <thead>
+                <tr>
+                    <th>Hizmet</th>
+                    <th>Doktor / Personel</th>
+                    <th>Tarih ve Saat</th>
+                    <th>Sure</th>
+                    <th>Ucret</th>
+                    <th>Durum</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {% for randevu in randevular %}
+                    <tr>
+                        <td>{{ randevu.hizmet.ad }}</td>
+                        <td>{{ randevu.calisan.ad }}</td>
+                        <td>
+                            {{ randevu.baslangic.strftime('%d.%m.%Y %H:%M') }}
+                        </td>
+                        <td>{{ randevu.sure_dakika }} dk</td>
+                        <td>{{ randevu.ucret }} TL</td>
+                        <td>{{ randevu.durum }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p>Henuz randevunuz bulunmuyor.</p>
+    {% endif %}
+
+    <form method="POST" action="{{ url_for('cikis') }}">
+        <button type="submit">Cikis Yap</button>
+    </form>
+</body>
+</html>
