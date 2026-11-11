@@ -1,15 +1,20 @@
 
-from datetime import time
+
+from datetime import datetime, time, timedelta
 
 from sqlalchemy import select
 
 from modeller import (
+    Hasta,
     Doktor,
     SaglikPersoneli,
+    Hizmet,
+    Randevu,
     CalismaSaati,
     CalisanHizmet,
     CalisanUygunluk
 )
+
 from veritabani import veritabani
 
 
@@ -97,3 +102,96 @@ def uygunluk_ekle(calisan, gun, baslangic, bitis):
 
     veritabani.session.add(kayit)
     return kayit
+
+
+def randevu_olustur(hasta, calisan, hizmet, baslangic):
+    # 1. Kullanici ve tarih kontrolu
+    if not isinstance(hasta, Hasta) or hasta.id is None:
+        raise ValueError("Gecerli bir hasta gerekli")
+
+    calisan_kontrol(calisan)
+
+    if not isinstance(hizmet, Hizmet) or hizmet.id is None:
+        raise ValueError("Gecerli bir hizmet gerekli")
+
+    if not isinstance(baslangic, datetime):
+        raise ValueError("Gecerli tarih ve saat gerekli")
+
+    if baslangic.tzinfo is not None:
+        raise ValueError("Yerel tarih ve saat kullanilmali")
+
+    if baslangic <= datetime.now():
+        raise ValueError("Gecmis bir tarihe randevu alinamaz")
+
+    # 2. Hizmetin calisana atanmis olmasi
+    atama = veritabani.session.get(
+        CalisanHizmet,
+        (calisan.id, hizmet.id)
+    )
+
+    if atama is None:
+        raise ValueError("Calisan bu hizmeti sunmuyor")
+
+    if hizmet.bolum.sube_id != calisan.sube_id:
+        raise ValueError("Hizmet farkli subeye ait")
+
+    # 3. Randevu bitis saatini hesapla
+    if hizmet.sure_dakika <= 0:
+        raise ValueError("Hizmet suresi gecersiz")
+
+    bitis = baslangic + timedelta(
+        minutes=hizmet.sure_dakika
+    )
+
+    # 4. Calisanin uygunluk kontrolu
+    gun = baslangic.weekday()
+
+    uygunluklar = veritabani.session.scalars(
+        select(CalisanUygunluk).where(
+            CalisanUygunluk.calisan_id == calisan.id,
+            CalisanUygunluk.gun == gun
+        )
+    ).all()
+
+    uygun = (
+        bitis.date() == baslangic.date()
+        and any(
+            saat.baslangic <= baslangic.time()
+            and bitis.time() <= saat.bitis
+            for saat in uygunluklar
+        )
+    )
+
+    if not uygun:
+        raise ValueError("Calisan bu saatte uygun degil")
+
+    # 5. Diger randevularla cakisma kontrolu
+    cakisan = veritabani.session.scalar(
+        select(Randevu).where(
+            Randevu.calisan_id == calisan.id,
+            Randevu.durum.in_(
+                ["beklemede", "onaylandi"]
+            ),
+            Randevu.baslangic < bitis,
+            Randevu.bitis > baslangic
+        )
+    )
+
+    if cakisan is not None:
+        raise ValueError("Bu saatte baska randevu var")
+
+    # 6. Randevuyu olustur
+    randevu = Randevu(
+        hasta_id=hasta.id,
+        calisan_id=calisan.id,
+        hizmet_id=hizmet.id,
+        baslangic=baslangic,
+        bitis=bitis,
+        sure_dakika=hizmet.sure_dakika,
+        ucret=hizmet.ucret,
+        durum="beklemede"
+    )
+
+    veritabani.session.add(randevu)
+
+    return randevu

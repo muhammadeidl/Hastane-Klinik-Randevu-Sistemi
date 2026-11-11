@@ -1,9 +1,38 @@
 
-from sqlalchemy import ForeignKey, String, Integer, Numeric, Time, UniqueConstraint, CheckConstraint
-from sqlalchemy.orm import Mapped, mapped_column, relationship
-from werkzeug.security import generate_password_hash, check_password_hash
+# from sqlalchemy import ForeignKey, String, Integer, Numeric, Time, UniqueConstraint, CheckConstraint
+# from sqlalchemy.orm import Mapped, mapped_column, relationship
+# from werkzeug.security import generate_password_hash, check_password_hash
+# from datetime import date, datetime, time, timedelta
+# from decimal import Decimal
+# from datetime import time
+# from veritabani import veritabani
+
+
+
+from datetime import datetime, time
 from decimal import Decimal
-from datetime import time
+
+from sqlalchemy import (
+    ForeignKey,
+    String,
+    Integer,
+    Numeric,
+    Time,
+    UniqueConstraint,
+    CheckConstraint
+)
+
+from sqlalchemy.orm import (
+    Mapped,
+    mapped_column,
+    relationship
+)
+
+from werkzeug.security import (
+    generate_password_hash,
+    check_password_hash
+)
+
 from veritabani import veritabani
 
 class Hastane(veritabani.Model):
@@ -319,3 +348,75 @@ class CalisanUygunluk(veritabani.Model):
     )
 
     calisan: Mapped["Kullanici"] = relationship()
+
+
+class Randevu(veritabani.Model):
+    __tablename__ = "randevular"
+
+    __table_args__ = (
+        CheckConstraint(
+            "sure_dakika > 0",
+            name="ck_randevu_sure"
+        ),
+        CheckConstraint(
+            "ucret >= 0",
+            name="ck_randevu_ucret"
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+
+    hasta_id: Mapped[int] = mapped_column(
+        ForeignKey("kullanicilar.id"),
+        nullable=False
+    )
+
+    calisan_id: Mapped[int] = mapped_column(
+        ForeignKey("kullanicilar.id"),
+        nullable=False
+    )
+
+    hizmet_id: Mapped[int] = mapped_column(
+        ForeignKey("hizmetler.id"),
+        nullable=False
+    )
+
+    baslangic: Mapped[datetime] = mapped_column(
+        nullable=False
+    )
+
+    bitis: Mapped[datetime] = mapped_column(
+        nullable=False
+    )
+
+    sure_dakika: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False
+    )
+
+    ucret: Mapped[Decimal] = mapped_column(
+        Numeric(10, 2),
+        nullable=False
+    )
+
+    durum: Mapped[str] = mapped_column(
+        String(20),
+        nullable=False,
+        default="beklemede"
+    )
+
+    hasta: Mapped["Kullanici"] = relationship(
+        foreign_keys=[hasta_id]
+    )
+
+    calisan: Mapped["Kullanici"] = relationship(
+        foreign_keys=[calisan_id]
+    )
+
+    hizmet: Mapped["Hizmet"] = relationship()
+
+    def bilgi_goster(self):
+        return (
+            f"Randevu #{self.id} - "
+            f"{self.baslangic} - {self.durum}"
+        )
